@@ -37,10 +37,12 @@ def get_corpnames_partial(name):
 
 
 class JiebaExtractor:
-    def __init__(self):
+    def __init__(self, fn):
         jieba.initialize()
+        self.fn = fn
 
-    def load_user_dicts(self, dir_path, user_dicts=None):
+    @staticmethod
+    def load_user_dicts(dir_path, user_dicts=None):
         if not user_dicts:
             logger.info("No user defined dictionaries.")
 
@@ -54,8 +56,8 @@ class JiebaExtractor:
             jieba.load_userdict(path)
             logger.info(f"User dictionary {user_dict} loaded.")
 
-    def extract(self, data, target_path, fn=get_corpnames_partial):
-        extracted = data.apply(fn)
+    def extract(self, data, target_path):
+        extracted = data.apply(self.fn)
 
         target_dir, filename = os.path.split(target_path)
         create_dirs(target_dir)
