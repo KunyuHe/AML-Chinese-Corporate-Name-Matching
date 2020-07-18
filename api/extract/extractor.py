@@ -18,11 +18,11 @@ def get_corpnames_partial(name):
         cut = cut[1:]
 
     res = ""
-    for i in range(len(cut)):
+    for i, curr in enumerate(cut):
         # 如果括号中的内容为地名或者公司后缀，去掉括号中的内容
         if i > 0 and i < len(cut) - 1:
             if all([cut[i - 1].flag == 'x', cut[i + 1].flag == 'x',
-                    cut[i].flag in ('ns', 'corp')]):
+                    curr.flag in ('ns', 'corp')]):
                 continue
 
         # 去掉括号和公司后缀
