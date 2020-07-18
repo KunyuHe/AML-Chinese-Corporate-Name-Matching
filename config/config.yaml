@@ -1,0 +1,8 @@
+user_dicts: [add_prefix.txt,
+             corp_suffix.txt]
+
+weights:
+  字音: 0.5
+  字形:
+    笔画: 0.25
+    部首: 0.25
