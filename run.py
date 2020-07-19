@@ -19,6 +19,16 @@ parser.add_argument('--update',
                     type=bool, default=True, help="客户列表是否有更新")
 args = parser.parse_args()
 
+
+def read_raw(config):
+    return get_corpnames_full(config['raw']['file'], config['raw']['col'])
+
+def extract(extractor, data, config):
+    return extractor.extract(data,
+                             config['extracted']['file'],
+                             config['extracted']['col'])
+
+
 if __name__ == '__main__':
     log_config = YamlReader(os.path.join(CONFIG_DIR, args.log_config)).read()
     logging.config.dictConfig(log_config)
@@ -30,11 +40,8 @@ if __name__ == '__main__':
                                                                      []))
 
     targets_config = api_config['TARGETS']
-    targets = get_corpnames_full(filename=targets_config['raw']['file'],
-                                 colname=targets_config['raw']['col'])
-    targets = extractor.extract(data=targets,
-                                filename=targets_config['extracted']['file'],
-                                colname=targets_config['extracted']['col'])
+    targets = read_raw(targets_config)
+    targets = extract(extractor, targets, targets_config)
 
     matcher_config = api_config["MATCHER"]
     matcher = ChineseFuzzyMatcher(
@@ -44,11 +51,8 @@ if __name__ == '__main__':
 
     clients_config = api_config["CLIENTS"]
     if args.update:
-        clients = get_corpnames_full(filename=clients_config['raw']['file'],
-                                     colname=clients_config['raw']['col'])
-        clients = extractor.extract(data=clients,
-                                    filename=clients_config['extracted']['file'],
-                                    colname=clients_config['extracted']['col'])
+        clients = read_raw(clients_config)
+        clients = extract(extractor, clients, clients_config)
     else:
         clients = pd.read_csv(os.path.join(DATA_DIR, "extracted",
                                            clients_config['extracted']['file']),
