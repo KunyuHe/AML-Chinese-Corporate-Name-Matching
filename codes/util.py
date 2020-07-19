@@ -1,10 +1,10 @@
 import logging
 import os
+import webbrowser
 from math import atan, pi
+from tempfile import NamedTemporaryFile
 
 import pandas as pd
-import webbrowser
-from tempfile import NamedTemporaryFile
 import yaml
 
 from codes import DATA_DIR
@@ -76,3 +76,16 @@ def view_df(df):
     with NamedTemporaryFile(delete=False, suffix='.html', mode='w') as f:
         df.to_html(f)
     webbrowser.open(f.name)
+
+
+def df_to_csv(df, dir_path, filename, index=False, encoding='utf_8_sig'):
+    create_dirs(dir_path)
+
+    if filename.split(".")[-1] != "csv":
+        msg = "File name must have the extension .csv."
+        logger.error(msg)
+        raise TypeError(msg)
+
+    df.to_csv(os.path.join(dir_path, filename), index=index, encoding=encoding)
+
+

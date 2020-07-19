@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from codes import DATA_DIR
-from codes.util import create_dirs
+from codes.util import df_to_csv
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +68,5 @@ class JiebaExtractor:
                                  columns=[data.name, colname])
 
         dir_path = os.path.join(DATA_DIR, "extracted")
-        create_dirs(dir_path)
-        extracted.to_csv(os.path.join(dir_path, filename),
-                         index=False, encoding='utf_8_sig')
-
+        df_to_csv(extracted, dir_path, filename)
         return extracted

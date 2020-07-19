@@ -3,13 +3,13 @@ import os
 from collections import defaultdict
 
 import numpy as np
+import pandas as pd
 from dimsim import get_distance
 from fuzzychinese import FuzzyChineseMatch
 from joblib import dump, load
 
 from codes import MODEL_DIR, REPORT_DIR
-from codes.util import arctan_mapping, text_sliding_window, view_df
-import pandas as pd
+from codes.util import arctan_mapping, text_sliding_window, view_df, df_to_csv
 
 logger = logging.getLogger(__name__)
 
@@ -133,9 +133,8 @@ class ChineseFuzzyMatcher:
                             self.sim_dict[key][i, mask]
                         )
 
-        logger.info(res)
         res = pd.DataFrame(res).set_index(['目标', '客户'])
-        res.to_csv(os.path.join(REPORT_DIR, output_file), encoding='utf_8_sig')
+        df_to_csv(res, REPORT_DIR, output_file, index=True)
         view_df(res)
 
 

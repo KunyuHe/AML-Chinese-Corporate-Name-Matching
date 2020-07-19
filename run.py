@@ -72,7 +72,7 @@ if __name__ == '__main__':
         matcher.load_models()
 
     matcher.evaluate()
-    matcher.report(matcher_config.get('threshold', 0.6),
-                   clients[clients_config['raw']['col']],
-                   targets[targets_config['raw']['col']],
-                   args.output)
+    matcher.report(threshold=matcher_config.get('threshold', 0.6),
+                   texts=clients[clients_config['raw']['col']],
+                   other=targets[targets_config['raw']['col']],
+                   output_file=args.output)

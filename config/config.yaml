@@ -26,4 +26,3 @@ MATCHER:
   penalty: 0.1
   ngram: 3
   threshold: 0.5
-  topn: 3
