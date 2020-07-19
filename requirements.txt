@@ -1,0 +1,10 @@
+fuzzychinese==0.1.5
+dimsim==0.2.2
+scikit-learn==0.23.1
+pandas==1.0.5
+numpy==1.18.5
+python==3.8.3
+pyyaml==5.3.1
+scipy==1.5.0
+xlrd==1.2.0
+yaml==0.1.7
