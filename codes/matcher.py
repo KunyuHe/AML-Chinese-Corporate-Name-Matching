@@ -1,13 +1,15 @@
 import logging
 import os
+from collections import defaultdict
 
 import numpy as np
 from dimsim import get_distance
 from fuzzychinese import FuzzyChineseMatch
 from joblib import dump, load
 
-from codes import MODEL_DIR
-from codes.util import arctan_mapping, text_sliding_window
+from codes import MODEL_DIR, REPORT_DIR
+from codes.util import arctan_mapping, text_sliding_window, view_df
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +17,7 @@ logger = logging.getLogger(__name__)
 class ChineseFuzzyMatcher:
     DEFAULT_WEIGHTS = {'phonetic': 0.3, 'stroke': 0.35, 'radical': 0.35}
     DEFAULT_THRESHOLD = 0.5
+    DEFAULT_PENALTY = 0.1
 
     @classmethod
     def check_weights(cls, weights):
@@ -31,21 +34,28 @@ class ChineseFuzzyMatcher:
             threshold = cls.DEFAULT_THRESHOLD
         return threshold
 
-    def __init__(self, other, weights):
+    @classmethod
+    def check_penalty(cls, penalty):
+        if not penalty:
+            penalty = cls.DEFAULT_PENALTY
+        return penalty
+
+    def __init__(self, other, weights, penalty):
         self.__weights = ChineseFuzzyMatcher.check_weights(weights)
+        self.__penalty = ChineseFuzzyMatcher.check_penalty(penalty)
 
         self.__texts = None
         self.__other = other
-        self.stroke_model = None
-        self.radical_model = None
+        self.model_dict = {}
+        self.sim_dict = {}
 
     @property
     def weights(self):
         return self.__weights
 
-    @weights.setter
-    def weights(self, value):
-        self.__weights = ChineseFuzzyMatcher.check_weights(value)
+    @property
+    def penalty(self):
+        return self.__penalty
 
     @property
     def texts(self):
@@ -59,55 +69,77 @@ class ChineseFuzzyMatcher:
         self.__texts = texts
 
     def fit(self, ngram):
-        if self.weights['stroke']:
-            self.stroke_model = FuzzyChineseMatch(ngram_range=(ngram, ngram),
-                                                  analyzer='stroke')
-            self.stroke_model.fit(self.texts)
-            logger.info("Stroke model updated.")
-            dump(self.stroke_model, os.path.join(MODEL_DIR, 'stroke.joblib'))
+        for key in ('stroke', 'radical'):
+            if not self.weights[key]:
+                continue
 
-        if self.weights['radical']:
-            self.radical_model = FuzzyChineseMatch(ngram_range=(ngram, ngram),
-                                                   analyzer='radical')
-            self.radical_model.fit(self.texts)
-            logger.info("Radical model updated.")
-            dump(self.radical_model, os.path.join(MODEL_DIR, 'radical.joblib'))
+            self.model_dict[key] = FuzzyChineseMatch(ngram_range=(ngram, ngram),
+                                                     analyzer=key)
+            self.model_dict[key].fit(self.texts)
+            logger.info(f"{key.title()} model updated.")
+            dump(self.model_dict[key], os.path.join(MODEL_DIR, f'{key}.joblib'))
 
     def load_models(self):
-        path = os.path.join(MODEL_DIR, 'stroke.joblib')
-        if os.path.isfile(path):
-            self.stroke_model = load(path)
-            logger.info("Stroke model loaded.")
+        for key in ('stroke', 'radical'):
+            if not self.weights[key]:
+                continue
 
-        path = os.path.join(MODEL_DIR, 'radical.joblib')
-        if os.path.isfile(path):
-            self.radical_model = load(path)
-            logger.info("Radical model loaded.")
+            path = os.path.join(MODEL_DIR, f'{key}.joblib')
+            if os.path.isfile(path):
+                self.model_dict[key] = load(path)
+                logger.info(f"{key.title()} model loaded.")
 
     def evaluate(self):
         self.sim_matrix = np.zeros((len(self.other), len(self.texts)))
 
-        if self.stroke_model:
-            self.stroke_model.transform(self.other)
-            self.sim_matrix += self.stroke_model.sim_matrix_ * \
-                               self.weights['stroke']
-
-        if self.radical_model:
-            self.radical_model.transform(self.other)
-            self.sim_matrix += self.radical_model.sim_matrix_ * \
-                               self.weights['radical']
+        for key in ('stroke', 'radical'):
+            if self.model_dict[key]:
+                self.model_dict[key].transform(self.other)
+                self.sim_dict[key] = self.model_dict[key].sim_matrix_
+                self.sim_matrix += self.sim_dict[key] * self.weights[key]
 
         if self.weights['phonetic']:
-            for i, other_text in self.other.iteritems():
-                for j, self_text in self.texts.iteritems():
-                    sim = get_phonetic_similarity(other_text, self_text)
-                    self.sim_matrix[i, j] += sim * self.weights['phonetic']
+            self.sim_dict['phonetic'] = np.array([
+                [get_phonetic_similarity(other_text, self_text, self.penalty)
+                 for self_text in self.texts]
+                for other_text in self.other
+            ])
+            self.sim_matrix += self.sim_dict['phonetic'] * \
+                               self.weights['phonetic']
 
-    def report(self, threshold):
-        mask = np.any(self.sim_matrix >= threshold, axis=1)
-        alert = self.sim_matrix[mask]
+    def report(self, threshold, texts, other, output_file):
+        threshold = ChineseFuzzyMatcher.check_threshold(threshold)
+        res = defaultdict(list)
 
-def get_phonetic_similarity(self, other):
+        for i, target in other.iteritems():
+            mask = (self.sim_matrix[i, :] >= threshold)
+            if np.any(mask):
+                n = len(self.sim_matrix[i, mask])
+                res['目标'].extend([target] * n)
+                res['目标简称'].extend([self.other[i]] * n)
+
+                res['客户'].extend(texts[mask])
+                res['客户简称'].extend(self.texts[mask])
+                res[f'相似度（阈值 = {threshold}）'].extend(self.sim_matrix[i, mask])
+                for header, key in zip(
+                        ["音似（权重 = {}，长度错位惩罚项 = %s）" % self.penalty,
+                         "形似（笔画，权重 = {}）", "形似（部首，权重 = {}）"],
+                        ['phonetic', 'stroke', 'radical']
+                ):
+                    if not self.weights[key]:
+                        res[header.format(self.weights[key])].extend([0] * n)
+                    else:
+                        res[header.format(self.weights[key])].extend(
+                            self.sim_dict[key][i, mask]
+                        )
+
+        logger.info(res)
+        res = pd.DataFrame(res).set_index(['目标', '客户'])
+        res.to_csv(os.path.join(REPORT_DIR, output_file), encoding='utf_8_sig')
+        view_df(res)
+
+
+def get_phonetic_similarity(self, other, penalty):
     m, n = len(self), len(other)
 
     if m == n:
@@ -118,6 +150,6 @@ def get_phonetic_similarity(self, other):
     else:
         fixed, slide = other, self
 
-    min_dist = min([get_distance(fixed, sub)
-                    for sub in text_sliding_window(slide, min(m, n))])
-    return arctan_mapping(min_dist)
+    dists = [get_distance(fixed, sub)
+             for sub in text_sliding_window(slide, min(m, n))]
+    return arctan_mapping(min(dists) + penalty * len(dists))

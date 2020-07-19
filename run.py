@@ -1,7 +1,8 @@
 import argparse
 import logging.config
-import pandas as pd
 import os
+
+import pandas as pd
 
 from codes import CONFIG_DIR, DATA_DIR
 from codes.extractor import JiebaExtractor, get_corpnames_partial
@@ -17,11 +18,15 @@ parser.add_argument('--api_config',
 
 parser.add_argument('--update',
                     type=bool, default=True, help="客户列表是否有更新")
+
+parser.add_argument('--output',
+                    type=str, default="report.csv", help="输出报告文件名")
 args = parser.parse_args()
 
 
 def read_raw(config):
     return get_corpnames_full(config['raw']['file'], config['raw']['col'])
+
 
 def extract(extractor, data, config):
     return extractor.extract(data,
@@ -36,8 +41,9 @@ if __name__ == '__main__':
     api_config = YamlReader(os.path.join(CONFIG_DIR, args.api_config)).read()
 
     extractor = JiebaExtractor(fn=get_corpnames_partial)
-    extractor.load_user_dicts(user_dicts=api_config['EXTRACTOR'].get('user_dicts',
-                                                                     []))
+    extractor.load_user_dicts(
+        user_dicts=api_config['EXTRACTOR'].get('user_dicts',
+                                               []))
 
     targets_config = api_config['TARGETS']
     targets = read_raw(targets_config)
@@ -46,7 +52,8 @@ if __name__ == '__main__':
     matcher_config = api_config["MATCHER"]
     matcher = ChineseFuzzyMatcher(
         weights=matcher_config.get('weights', {}),
-        other=targets[targets_config['extracted']['col']]
+        other=targets[targets_config['extracted']['col']],
+        penalty=matcher_config.get('penalty')
     )
 
     clients_config = api_config["CLIENTS"]
@@ -65,4 +72,7 @@ if __name__ == '__main__':
         matcher.load_models()
 
     matcher.evaluate()
-    matcher.report(matcher_config.get('threshold', 0.6))
+    matcher.report(matcher_config.get('threshold', 0.6),
+                   clients[clients_config['raw']['col']],
+                   targets[targets_config['raw']['col']],
+                   args.output)

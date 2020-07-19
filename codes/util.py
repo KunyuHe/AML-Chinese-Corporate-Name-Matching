@@ -1,9 +1,12 @@
 import logging
 import os
+from math import atan, pi
 
 import pandas as pd
+import webbrowser
+from tempfile import NamedTemporaryFile
 import yaml
-from math import atan, pi
+
 from codes import DATA_DIR
 
 logger = logging.getLogger(__name__)
@@ -67,3 +70,9 @@ def text_sliding_window(text, size):
 
 def arctan_mapping(num):
     return 1 - atan(num) / (pi / 2)
+
+
+def view_df(df):
+    with NamedTemporaryFile(delete=False, suffix='.html', mode='w') as f:
+        df.to_html(f)
+    webbrowser.open(f.name)

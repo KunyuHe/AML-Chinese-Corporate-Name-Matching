@@ -6,8 +6,8 @@ import jieba.posseg as pseg
 import numpy as np
 import pandas as pd
 
-from codes.util import create_dirs
 from codes import DATA_DIR
+from codes.util import create_dirs
 
 logger = logging.getLogger(__name__)
 
