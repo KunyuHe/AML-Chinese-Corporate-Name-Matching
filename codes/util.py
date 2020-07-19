@@ -3,6 +3,8 @@ import os
 
 import pandas as pd
 import yaml
+from math import atan, pi
+from codes import DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -36,13 +38,13 @@ class YamlReader:
         return self.config
 
 
-def get_corpnames_full(file_path, colname):
+def get_corpnames_full(filename, colname):
+    file_path = os.path.join(DATA_DIR, "raw", filename)
     if not os.path.isfile(file_path):
         msg = f"Data not found at {file_path}."
         logger.error(msg)
         raise FileNotFoundError(msg)
 
-    filename = os.path.split(file_path)[-1]
     suffix = filename.split(".")[-1]
     if suffix != "xlsx":
         msg = "Data must be in an excel file."
@@ -56,3 +58,12 @@ def get_corpnames_full(file_path, colname):
         raise KeyError(msg)
 
     return df[colname]
+
+
+def text_sliding_window(text, size):
+    n = len(text)
+    return [text[i:i + size] for i in range(n - size + 1)]
+
+
+def arctan_mapping(num):
+    return 1 - atan(num) / (pi / 2)

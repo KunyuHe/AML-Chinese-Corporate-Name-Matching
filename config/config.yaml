@@ -1,8 +1,28 @@
-user_dicts: [add_prefix.txt,
-             corp_suffix.txt]
+CLIENTS:
+  raw:
+    file: clients.xlsx
+    col: "机构全称"
+  extracted:
+    file: clients.csv
+    col: "机构简称"
 
-weights:
-  字音: 0.5
-  字形:
-    笔画: 0.25
-    部首: 0.25
+TARGETS:
+  raw:
+    file: targets.xlsx
+    col: "机构全称"
+  extracted:
+    file: targets.csv
+    col: "机构简称"
+
+EXTRACTOR:
+  user_dicts: [add_prefix.txt,
+               corp_suffix.txt]
+
+MATCHER:
+  weights:
+    phonetic: 0.3
+    stroke: 0.35
+    radical: 0.35
+  ngram: 3
+  threshold: 0.6
+  topn: 3

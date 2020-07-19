@@ -3,8 +3,11 @@ import os
 
 import jieba
 import jieba.posseg as pseg
+import numpy as np
+import pandas as pd
 
-from api.utils.util import create_dirs
+from codes.util import create_dirs
+from codes import DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +44,12 @@ class JiebaExtractor:
         jieba.initialize()
         self.fn = fn
 
+        self.clients = None
+        self.target = None
+
     @staticmethod
-    def load_user_dicts(dir_path, user_dicts=None):
+    def load_user_dicts(user_dicts=None):
+        dir_path = os.path.join(DATA_DIR, "user_dicts")
         if not user_dicts:
             logger.info("No user defined dictionaries.")
 
@@ -56,12 +63,13 @@ class JiebaExtractor:
             jieba.load_userdict(path)
             logger.info(f"User dictionary {user_dict} loaded.")
 
-    def extract(self, data, target_path):
-        extracted = data.apply(self.fn)
+    def extract(self, data, filename, colname):
+        extracted = pd.DataFrame(np.c_[data, data.apply(self.fn)],
+                                 columns=[data.name, colname])
 
-        target_dir, filename = os.path.split(target_path)
-        create_dirs(target_dir)
-        filename = os.path.splitext(filename)[0]
+        dir_path = os.path.join(DATA_DIR, "extracted")
+        create_dirs(dir_path)
+        extracted.to_csv(os.path.join(dir_path, filename),
+                         index=False, encoding='utf_8_sig')
 
-        extracted.to_csv(os.path.join(target_dir, f"{filename}.txt"),
-                         header=False, index=False)
+        return extracted

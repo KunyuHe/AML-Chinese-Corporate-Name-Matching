@@ -16,7 +16,7 @@ handlers:
     formatter: simple
     filename: ./logs/info.log
     maxBytes: 10485760 # 10MB
-    backupCount: 20 #most 20 extensions
+    backupCount: 20 # most 20 extensions
     encoding: utf8
   error_file_handler:
     class: logging.handlers.RotatingFileHandler # 输出到文件

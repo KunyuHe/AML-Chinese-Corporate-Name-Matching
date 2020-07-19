@@ -1,10 +1,12 @@
 import argparse
 import logging.config
+import pandas as pd
 import os
 
-from api import CONFIG_DIR, DATA_DIR
-from api.extract.extractor import JiebaExtractor, get_corpnames_partial
-from api.utils.util import YamlReader, get_corpnames_full
+from codes import CONFIG_DIR, DATA_DIR
+from codes.extractor import JiebaExtractor, get_corpnames_partial
+from codes.matcher import ChineseFuzzyMatcher
+from codes.util import YamlReader, get_corpnames_full
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--log_config',
@@ -15,31 +17,48 @@ parser.add_argument('--api_config',
 
 parser.add_argument('--update',
                     type=bool, default=True, help="客户列表是否有更新")
-
-parser.add_argument('--clients',
-                    type=str, default="clients.xlsx", help="客户列表文件名")
-
-parser.add_argument('--targets',
-                    type=str, default="targets.xlsx", help="洗钱机构列表文件名")
 args = parser.parse_args()
 
 if __name__ == '__main__':
     log_config = YamlReader(os.path.join(CONFIG_DIR, args.log_config)).read()
     logging.config.dictConfig(log_config)
 
-    extractor = JiebaExtractor(get_corpnames_partial)
-
     api_config = YamlReader(os.path.join(CONFIG_DIR, args.api_config)).read()
-    user_dicts = api_config.get('user_dicts', None)
-    extractor.load_user_dicts(os.path.join(DATA_DIR, "user_dicts"), user_dicts)
 
-    targets = get_corpnames_full(os.path.join(DATA_DIR, "raw", args.targets),
-                                 "机构名称")
-    extractor.extract(targets, os.path.join(DATA_DIR, "extracted", args.targets))
+    extractor = JiebaExtractor(fn=get_corpnames_partial)
+    extractor.load_user_dicts(user_dicts=api_config['EXTRACTOR'].get('user_dicts',
+                                                                     []))
 
+    targets_config = api_config['TARGETS']
+    targets = get_corpnames_full(filename=targets_config['raw']['file'],
+                                 colname=targets_config['raw']['col'])
+    targets = extractor.extract(data=targets,
+                                filename=targets_config['extracted']['file'],
+                                colname=targets_config['extracted']['col'])
+
+    matcher_config = api_config["MATCHER"]
+    matcher = ChineseFuzzyMatcher(
+        weights=matcher_config.get('weights', {}),
+        other=targets[targets_config['extracted']['col']]
+    )
+
+    clients_config = api_config["CLIENTS"]
     if args.update:
-        raw = get_corpnames_full(os.path.join(DATA_DIR, "raw", args.clients),
-                                 "机构名称")
-        extractor.extract(raw, os.path.join(DATA_DIR, "extracted", args.clients))
+        clients = get_corpnames_full(filename=clients_config['raw']['file'],
+                                     colname=clients_config['raw']['col'])
+        clients = extractor.extract(data=clients,
+                                    filename=clients_config['extracted']['file'],
+                                    colname=clients_config['extracted']['col'])
+    else:
+        clients = pd.read_csv(os.path.join(DATA_DIR, "extracted",
+                                           clients_config['extracted']['file']),
+                              encoding='utf_8_sig')
 
+    matcher.load_self_texts(clients[clients_config['extracted']['col']])
+    if args.update:
+        matcher.fit(ngram=matcher_config.get('ngram', 3))
+    else:
+        matcher.load_models()
 
+    matcher.evaluate()
+    matcher.report(matcher_config.get('threshold', 0.6))
