@@ -1,0 +1,11 @@
+name: aml
+channels:
+  - defaults
+dependencies:
+  - python=3.8
+  - pip
+  - pandas
+  - xlrd
+  - jieba
+  - scikit-learn
+  - pyyaml

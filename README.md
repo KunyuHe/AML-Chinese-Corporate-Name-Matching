@@ -13,9 +13,7 @@ This project presents a tool that extracts the core segments of Chinese corporat
 
     >  Min Li, Marina Danilevsky, Sara Noeman and Yunyao Li. *DIMSIM: An Accurate Chinese Phonetic Similarity Algorithm based on Learned High Dimensional Encoding*. CoNLL 2018.
 
-    Since it only returns pairwise distance between two same-length strings in Chinese, we make use of a sliding window, take the minimum pairwise distance, and add penalty for the difference in length. To convert the distance on `[0, Inf)` to a similarity measure on `[0, 1]`, we use:
-
-    <img src="https://render.githubusercontent.com/render/math?math=\text{similarity}=\frac{\text{arctan}(\text{dist})}{\frac{\pi}{2}}">
+    Since it only returns pairwise distance between two same-length strings in Chinese, we make use of a sliding window, take the minimum pairwise distance, and add penalty for the difference in length. To convert the distance on `[0, Inf)` to a similarity measure on `[0, 1]`, we use <img src="https://render.githubusercontent.com/render/math?math=\text{similarity}=\frac{\text{arctan}(\text{dist})}{\frac{\pi}{2}}">.
 
   - Glyphic Similarity: To compare the glyphic features of Chinese strings, we make use of the `fuzzychinese` package. It extracts the radicals (部首) and strokes (笔画), sub-character structures of each Chinese character, constructs the `tf-idf` vector for the ngram model, and computes the Cosine similarity.
 
@@ -25,7 +23,7 @@ Follow the instructions to get a copy of the project up and running on your loca
 
 First, install `Git` and navigate to a location on your machine to put this project, and run:
 
-```consle
+```console
 git clone https://github.com/KunyuHe/AML-Chinese-Corporate-Name-Fuzzy-Matching.git
 cd AML-Chinese-Corporate-Name-Fuzzy-Matching
 ```
@@ -39,6 +37,16 @@ venv env
 .\env\Scripts\activate # For Windows, for macOS and Linux run source env/bin/activate
 pip install -r requirements.txt
 ```
+
+If you are like me, not a big fan of `pip`, you can install `Anaconda` first and follow:
+
+```console
+conda env create -f environment.yml
+conda activate aml
+pip install --user fuzzychinese dimsim
+```
+
+
 
 ## Usage
 
