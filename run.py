@@ -17,7 +17,7 @@ parser.add_argument('--api_config',
                     type=str, default="config.yaml", help="API配置文件名")
 
 parser.add_argument('--update',
-                    type=bool, default=True, help="客户列表是否有更新")
+                    type=bool, default=False, help="客户列表是否有更新")
 
 parser.add_argument('--output',
                     type=str, default="report.csv", help="输出报告文件名")
